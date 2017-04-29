@@ -3,12 +3,11 @@ package deferred_queue.core;
 import java.util.concurrent.TimeUnit;
 
 /**
- * @author @muratovv
- * @date 30.04.17
+ * Class represents waiting time for pulled from queue
  */
 public class Delay {
-    TimeUnit unit;
-    long     time;
+    private TimeUnit unit;
+    private long     time;
 
     private Delay(TimeUnit unit, long time) {
         this.unit = unit;
