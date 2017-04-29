@@ -14,7 +14,7 @@ public class Delay {
         this.time = time;
     }
 
-    public static Delay make(TimeUnit unit, long time) {
+    public static Delay delay(TimeUnit unit, long time) {
         return new Delay(unit, time);
     }
 }
