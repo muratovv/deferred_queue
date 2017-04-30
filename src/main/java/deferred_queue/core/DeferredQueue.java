@@ -27,7 +27,6 @@ public class DeferredQueue<T> {
         storage = new ArrayList<>(capacity);
         this.lock = new ReentrantLock(false);
         this.executorService = executorService;
-        this.executorService.submit(onTimePullThreadWork);
     }
 
     public DeferredQueue() {
@@ -65,6 +64,7 @@ public class DeferredQueue<T> {
             tryForcePull();
             add(value, delay, Stamped.now());
             sort();
+            submitBackgroundTask();
         } finally {
             lock.unlock();
         }
@@ -101,6 +101,15 @@ public class DeferredQueue<T> {
      */
     public void stopService() {
         executorService.shutdown();
+    }
+
+    /**
+     *
+     */
+    private void submitBackgroundTask() {
+        if (size() == 1) {
+            this.executorService.submit(onTimePullThreadWork);
+        }
     }
 
     /**
@@ -180,7 +189,7 @@ public class DeferredQueue<T> {
     /**
      * Background thread for pull
      */
-    Runnable onTimePullThreadWork = new Runnable() {
+    private Runnable onTimePullThreadWork = new Runnable() {
         @Override
         public void run() {
             System.out.println("Task submitted");
@@ -196,7 +205,7 @@ public class DeferredQueue<T> {
                     continue;
                 }
                 if (millisBeforeNext == -1) {
-                    millisBeforeNext = 100;
+                    return;
                 }
                 try {
                     Thread.sleep(millisBeforeNext);
