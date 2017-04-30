@@ -2,6 +2,8 @@ package deferred_queue.core;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -15,18 +17,21 @@ public class DeferredQueue<T> {
     private Callback<T> onTimeDequeCallback  = new EmptyCallback<>();
     private Callback<T> onForceDequeCallback = new EmptyCallback<>();
 
-    private Lock lock;
+    private Lock            lock;
+    private ExecutorService executorService;
 
     private ArrayList<Stamped<T>> storage;
 
-    public DeferredQueue(int capacity) {
+    public DeferredQueue(int capacity, ExecutorService executorService) {
         this.MAX_QUEUE_SIZE = capacity;
         storage = new ArrayList<>(capacity);
         this.lock = new ReentrantLock(false);
+        this.executorService = executorService;
+        this.executorService.submit(onTimePullThreadWork);
     }
 
     public DeferredQueue() {
-        this(1);
+        this(1, Executors.newSingleThreadExecutor());
     }
 
     public void updateOnTimeDequeCallback(Callback<T> onTimeDequeCallback) {
@@ -92,6 +97,13 @@ public class DeferredQueue<T> {
     }
 
     /**
+     * shutdown {@link ExecutorService} for end work
+     */
+    public void stopService() {
+        executorService.shutdown();
+    }
+
+    /**
      * Lock required
      */
     private void tryForcePull() {
@@ -149,9 +161,9 @@ public class DeferredQueue<T> {
     /**
      * Lock required
      *
-     * @return wait before next pull
+     * @return millis for wait before next pull
      */
-    private long OnTimePullIteration() {
+    private long onTimePullIteration() {
         if (size() > 0) {
             Stamped<T> nearest = peek();
             long       now     = Stamped.now();
@@ -162,6 +174,36 @@ public class DeferredQueue<T> {
                 return nearest.getStamp() - now;
             }
         }
-        return 0;
+        return -1;
     }
+
+    /**
+     * Background thread for pull
+     */
+    Runnable onTimePullThreadWork = new Runnable() {
+        @Override
+        public void run() {
+            System.out.println("Task submitted");
+            while (true) {
+                long millisBeforeNext;
+                try {
+                    lock.lock();
+                    millisBeforeNext = DeferredQueue.this.onTimePullIteration();
+                } finally {
+                    lock.unlock();
+                }
+                if (millisBeforeNext == 0) {
+                    continue;
+                }
+                if (millisBeforeNext == -1) {
+                    millisBeforeNext = 100;
+                }
+                try {
+                    Thread.sleep(millisBeforeNext);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    };
 }

@@ -9,8 +9,7 @@ import static deferred_queue.core.Delay.delay;
 import static org.junit.Assert.assertEquals;
 
 /**
- * @author @muratovv
- * @date 30.04.17
+ * Use cases and unit tests for {@link DeferredQueue}
  */
 public class DeferredQueueTest {
 
@@ -67,5 +66,29 @@ public class DeferredQueueTest {
         queue.insert(100500, delay(TimeUnit.HOURS, 1));
         queue.forcePull();
         assertEquals(true, callbackExecuted[0]);
+    }
+
+    @Test
+    public void onTimeOneElementPullTest() throws Exception {
+        final boolean[] callbackExecuted = {false};
+
+        queue.updateOnTimeDequeCallback(new Callback<Integer>() {
+            @Override
+            public void call(Integer value) {
+                callbackExecuted[0] = true;
+                assertEquals(100500, ((long) value));
+            }
+        });
+        queue.insert(100500, delay(TimeUnit.SECONDS, 1));
+        threadWait(delay(TimeUnit.SECONDS, 2));
+        assertEquals(true, callbackExecuted[0]);
+    }
+
+    private void threadWait(Delay delay) {
+        try {
+            Thread.sleep(delay.toMillis());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }
