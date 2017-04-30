@@ -49,7 +49,7 @@ public class DeferredQueueTest {
             }
         });
         queue.insert(100500, delay(TimeUnit.HOURS, 1));
-        queue.forceOnTimePull();
+        queue.forceTimePull();
         assertEquals(true, callbackExecuted[0]);
     }
 

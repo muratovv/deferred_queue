@@ -1,22 +1,28 @@
 package deferred_queue.core;
 
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Class provide queue with time deferred behavior
  */
+@SuppressWarnings("WeakerAccess")
 public class DeferredQueue<T> {
-    private int queueSize = 1;
+    private final int MAX_QUEUE_SIZE;
 
     private Callback<T> onTimeDequeCallback  = new EmptyCallback<>();
     private Callback<T> onForceDequeCallback = new EmptyCallback<>();
 
-    private Queue<T> internalQueue;
+    private Lock lock;
+
+    private ArrayList<Stamped<T>> storage;
 
     public DeferredQueue(int capacity) {
-        this.queueSize = capacity;
-        internalQueue = new LinkedBlockingQueue<>(capacity);
+        this.MAX_QUEUE_SIZE = capacity;
+        storage = new ArrayList<>(capacity);
+        this.lock = new ReentrantLock(false);
     }
 
     public DeferredQueue() {
@@ -24,11 +30,21 @@ public class DeferredQueue<T> {
     }
 
     public void updateOnTimeDequeCallback(Callback<T> onTimeDequeCallback) {
-        this.onTimeDequeCallback = onTimeDequeCallback;
+        try {
+            lock.lock();
+            this.onTimeDequeCallback = onTimeDequeCallback;
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void updateOnForceDequeCallback(Callback<T> onForceDequeCallback) {
-        this.onForceDequeCallback = onForceDequeCallback;
+        try {
+            lock.lock();
+            this.onForceDequeCallback = onForceDequeCallback;
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -38,30 +54,114 @@ public class DeferredQueue<T> {
      * @param delay after it, {@value} will be polled and push in {@link DeferredQueue#onTimeDequeCallback}
      */
     public void insert(T value, Delay delay) {
-        if (internalQueue.size() == queueSize) {
-            forcePull();
+        try {
+            lock.lock();
+
+            tryForcePull();
+            add(value, delay, Stamped.now());
+            sort();
+        } finally {
+            lock.unlock();
         }
-        internalQueue.add(value);
     }
 
     /**
      * Force deque element with call {@link DeferredQueue#onTimeDequeCallback}
      */
-    public void forceOnTimePull() {
-        OnTimeDeque();
+    public void forceTimePull() {
+        try {
+            lock.lock();
+
+            internalTimePull();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
      * Force deque element with call {@link DeferredQueue#onForceDequeCallback}
      */
     public void forcePull() {
-        T val = internalQueue.poll();
+        try {
+            lock.lock();
+
+            internalForcePull();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Lock required
+     */
+    private void tryForcePull() {
+        if (size() == MAX_QUEUE_SIZE) {
+            internalForcePull();
+        }
+    }
+
+    private void internalForcePull() {
+        T val = poll();
         onForceDequeCallback.call(val);
     }
 
-    private void OnTimeDeque() {
-        T val = internalQueue.poll();
+    /**
+     * Lock required
+     */
+    private void internalTimePull() {
+        T val = poll();
         onTimeDequeCallback.call(val);
     }
 
+    /**
+     * Lock required
+     */
+    private T poll() {
+        return storage.remove(0).getValue();
+    }
+
+    /**
+     * Lock required
+     */
+    private void sort() {
+        Collections.sort(storage);
+    }
+
+    /**
+     * Lock required
+     */
+    private void add(T value, Delay delay, long currentStamp) {
+        storage.add(Stamped.stamped(value, delay.toMillis() + currentStamp));
+    }
+
+    private Stamped<T> peek() {
+        return storage.get(0);
+    }
+
+    /**
+     * Lock required
+     */
+    private int size() {
+        return storage.size();
+    }
+
+
+    /**
+     * Lock required
+     *
+     * @return wait before next pull
+     */
+    private long OnTimePullIteration() {
+        if (size() > 0) {
+            Stamped<T> nearest = peek();
+            long       now     = Stamped.now();
+            if (now - nearest.getStamp() >= 0) {
+                internalTimePull();
+                return 0;
+            } else {
+                return nearest.getStamp() - now;
+            }
+        }
+        return 0;
+    }
 }
