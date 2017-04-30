@@ -12,8 +12,12 @@ public class Stamped<T> implements Comparable<Stamped<T>> {
         this.expireTimestamp = expireTimestamp;
     }
 
-    public T get() {
+    public T getValue() {
         return value;
+    }
+
+    public long getStamp(){
+        return expireTimestamp;
     }
 
     public static <T> Stamped<T> stamped(T value, long timestamp) {
@@ -25,7 +29,7 @@ public class Stamped<T> implements Comparable<Stamped<T>> {
         return Long.compare(this.expireTimestamp, o.expireTimestamp);
     }
 
-    public long now(){
+    public static long now(){
         return System.currentTimeMillis();
     }
 }
