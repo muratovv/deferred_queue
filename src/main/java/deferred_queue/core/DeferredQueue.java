@@ -192,7 +192,6 @@ public class DeferredQueue<T> {
     private Runnable onTimePullThreadWork = new Runnable() {
         @Override
         public void run() {
-            System.out.println("Task submitted");
             while (true) {
                 long millisBeforeNext;
                 try {
