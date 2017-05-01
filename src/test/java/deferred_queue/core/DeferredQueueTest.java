@@ -35,6 +35,7 @@ public class DeferredQueueTest {
         queue.insert(100500, delay(1, TimeUnit.HOURS));
         queue.insert(666, delay(1, TimeUnit.HOURS));
         assertEquals(true, callbackExecuted[0]);
+        queue.stopService();
     }
 
     @Test
@@ -51,6 +52,7 @@ public class DeferredQueueTest {
         queue.insert(100500, delay(1, TimeUnit.HOURS));
         queue.forceTimePull();
         assertEquals(true, callbackExecuted[0]);
+        queue.stopService();
     }
 
     @Test
@@ -67,6 +69,7 @@ public class DeferredQueueTest {
         queue.insert(100500, delay(1, TimeUnit.HOURS));
         queue.forcePull();
         assertEquals(true, callbackExecuted[0]);
+        queue.stopService();
     }
 
     @Test
@@ -83,6 +86,7 @@ public class DeferredQueueTest {
         queue.insert(100500, delay(1, TimeUnit.SECONDS));
         threadWait(delay(2, TimeUnit.SECONDS));
         assertEquals(true, callbackExecuted[0]);
+        queue.stopService();
     }
 
     @Test
@@ -107,6 +111,7 @@ public class DeferredQueueTest {
         queue.insert(777, delay(500, TimeUnit.MILLISECONDS));
         threadWait(delay(2, TimeUnit.SECONDS));
         assertEquals(2, callbackExecuted[0]);
+        queue.stopService();
     }
 
     @Test
@@ -133,7 +138,7 @@ public class DeferredQueueTest {
         queue.insert(777, delay(100, TimeUnit.MILLISECONDS));
         threadWait(delay(2, TimeUnit.SECONDS));
         assertEquals(2, callbackExecuted[0]);
-
+        queue.stopService();
     }
 
     private void threadWait(Delay delay) {
