@@ -9,7 +9,7 @@ public class Delay {
     private TimeUnit unit;
     private long     duration;
 
-    private Delay(TimeUnit unit, long duration) {
+    private Delay(long duration, TimeUnit unit) {
         this.unit = unit;
         this.duration = duration;
     }
@@ -18,7 +18,7 @@ public class Delay {
         return TimeUnit.MILLISECONDS.convert(duration, unit);
     }
 
-    public static Delay delay(TimeUnit unit, long duration) {
-        return new Delay(unit, duration);
+    public static Delay delay(long duration, TimeUnit unit) {
+        return new Delay(duration, unit);
     }
 }

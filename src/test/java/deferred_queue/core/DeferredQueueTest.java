@@ -25,15 +25,15 @@ public class DeferredQueueTest {
     public void forceDequeTest() throws Exception {
         final boolean[] callbackExecuted = {false};
 
-        queue.updateOnForceDequeCallback(new Callback<Integer>() {
+        queue.setOnForceDequeCallback(new Callback<Integer>() {
             @Override
             public void call(Integer value) {
                 callbackExecuted[0] = true;
                 assertEquals(100500, ((long) value));
             }
         });
-        queue.insert(100500, delay(TimeUnit.HOURS, 1));
-        queue.insert(666, delay(TimeUnit.HOURS, 1));
+        queue.insert(100500, delay(1, TimeUnit.HOURS));
+        queue.insert(666, delay(1, TimeUnit.HOURS));
         assertEquals(true, callbackExecuted[0]);
     }
 
@@ -41,14 +41,14 @@ public class DeferredQueueTest {
     public void forceOnTimePullTest() throws Exception {
         final boolean[] callbackExecuted = {false};
 
-        queue.updateOnTimeDequeCallback(new Callback<Integer>() {
+        queue.setOnTimeExpiredCallback(new Callback<Integer>() {
             @Override
             public void call(Integer value) {
                 callbackExecuted[0] = true;
                 assertEquals(100500, ((long) value));
             }
         });
-        queue.insert(100500, delay(TimeUnit.HOURS, 1));
+        queue.insert(100500, delay(1, TimeUnit.HOURS));
         queue.forceTimePull();
         assertEquals(true, callbackExecuted[0]);
     }
@@ -57,14 +57,14 @@ public class DeferredQueueTest {
     public void forcePullTest() throws Exception {
         final boolean[] callbackExecuted = {false};
 
-        queue.updateOnForceDequeCallback(new Callback<Integer>() {
+        queue.setOnForceDequeCallback(new Callback<Integer>() {
             @Override
             public void call(Integer value) {
                 callbackExecuted[0] = true;
                 assertEquals(100500, ((long) value));
             }
         });
-        queue.insert(100500, delay(TimeUnit.HOURS, 1));
+        queue.insert(100500, delay(1, TimeUnit.HOURS));
         queue.forcePull();
         assertEquals(true, callbackExecuted[0]);
     }
@@ -73,15 +73,15 @@ public class DeferredQueueTest {
     public void onTimeOneElementPullTest() throws Exception {
         final boolean[] callbackExecuted = {false};
 
-        queue.updateOnTimeDequeCallback(new Callback<Integer>() {
+        queue.setOnTimeExpiredCallback(new Callback<Integer>() {
             @Override
             public void call(Integer value) {
                 callbackExecuted[0] = true;
                 assertEquals(100500, ((long) value));
             }
         });
-        queue.insert(100500, delay(TimeUnit.SECONDS, 1));
-        threadWait(delay(TimeUnit.SECONDS, 2));
+        queue.insert(100500, delay(1, TimeUnit.SECONDS));
+        threadWait(delay(2, TimeUnit.SECONDS));
         assertEquals(true, callbackExecuted[0]);
     }
 
@@ -89,7 +89,7 @@ public class DeferredQueueTest {
     public void twoTaskSubmittedWithDelayTest() throws Exception {
         final int[] callbackExecuted = {0};
 
-        queue.updateOnTimeDequeCallback(new Callback<Integer>() {
+        queue.setOnTimeExpiredCallback(new Callback<Integer>() {
             @Override
             public void call(Integer value) {
                 if (callbackExecuted[0] == 0) {
@@ -102,10 +102,10 @@ public class DeferredQueueTest {
 
             }
         });
-        queue.insert(666, delay(TimeUnit.MILLISECONDS, 500));
-        threadWait(delay(TimeUnit.SECONDS, 2));
-        queue.insert(777, delay(TimeUnit.MILLISECONDS, 500));
-        threadWait(delay(TimeUnit.SECONDS, 2));
+        queue.insert(666, delay(500, TimeUnit.MILLISECONDS));
+        threadWait(delay(2, TimeUnit.SECONDS));
+        queue.insert(777, delay(500, TimeUnit.MILLISECONDS));
+        threadWait(delay(2, TimeUnit.SECONDS));
         assertEquals(2, callbackExecuted[0]);
     }
 
@@ -115,7 +115,7 @@ public class DeferredQueueTest {
 
         final int[] callbackExecuted = {0};
 
-        queue.updateOnTimeDequeCallback(new Callback<Integer>() {
+        queue.setOnTimeExpiredCallback(new Callback<Integer>() {
             @Override
             public void call(Integer value) {
                 if (callbackExecuted[0] == 0) {
@@ -128,10 +128,10 @@ public class DeferredQueueTest {
 
             }
         });
-        queue.insert(666, delay(TimeUnit.MILLISECONDS, 500));
+        queue.insert(666, delay(500, TimeUnit.MILLISECONDS));
         // second insert must appear earlier then first
-        queue.insert(777, delay(TimeUnit.MILLISECONDS, 100));
-        threadWait(delay(TimeUnit.SECONDS, 2));
+        queue.insert(777, delay(100, TimeUnit.MILLISECONDS));
+        threadWait(delay(2, TimeUnit.SECONDS));
         assertEquals(2, callbackExecuted[0]);
 
     }

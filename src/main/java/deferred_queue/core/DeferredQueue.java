@@ -12,9 +12,22 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @SuppressWarnings("WeakerAccess")
 public class DeferredQueue<T> {
+    /**
+     * Maximal size available in queue, after exceed called {@link DeferredQueue#onForceDequeCallback}
+     */
     private final int MAX_QUEUE_SIZE;
 
-    private Callback<T> onTimeDequeCallback  = new EmptyCallback<>();
+    /**
+     * Callback called when time of element in queue expired
+     * or on call {@link DeferredQueue#forceTimePull()}
+     */
+    private Callback<T> onTimeExpiredCallback = new EmptyCallback<>();
+
+    /**
+     * Callback called when element forced removed from queue,
+     * by client code with {@link DeferredQueue#forcePull()}
+     * or on queue overflow.
+     */
     private Callback<T> onForceDequeCallback = new EmptyCallback<>();
 
     private Lock            lock;
@@ -22,6 +35,10 @@ public class DeferredQueue<T> {
 
     private ArrayList<Stamped<T>> storage;
 
+    /**
+     * @param capacity        maximum size of queue
+     * @param executorService service responsible for execute background pull task
+     */
     public DeferredQueue(int capacity, ExecutorService executorService) {
         this.MAX_QUEUE_SIZE = capacity;
         storage = new ArrayList<>(capacity);
@@ -33,16 +50,22 @@ public class DeferredQueue<T> {
         this(1, Executors.newSingleThreadExecutor());
     }
 
-    public void updateOnTimeDequeCallback(Callback<T> onTimeDequeCallback) {
+    /**
+     * Setter for {@link DeferredQueue#onTimeExpiredCallback}
+     */
+    public void setOnTimeExpiredCallback(Callback<T> onTimeDequeCallback) {
         try {
             lock.lock();
-            this.onTimeDequeCallback = onTimeDequeCallback;
+            this.onTimeExpiredCallback = onTimeDequeCallback;
         } finally {
             lock.unlock();
         }
     }
 
-    public void updateOnForceDequeCallback(Callback<T> onForceDequeCallback) {
+    /**
+     * Setter for {@link DeferredQueue#onForceDequeCallback}
+     */
+    public void setOnForceDequeCallback(Callback<T> onForceDequeCallback) {
         try {
             lock.lock();
             this.onForceDequeCallback = onForceDequeCallback;
@@ -55,7 +78,7 @@ public class DeferredQueue<T> {
      * Insert {@code value} to queue
      *
      * @param value target object
-     * @param delay after it, {@value} will be polled and push in {@link DeferredQueue#onTimeDequeCallback}
+     * @param delay after it, {@value} will be polled to {@link DeferredQueue#onTimeExpiredCallback}
      */
     public void insert(T value, Delay delay) {
         try {
@@ -71,7 +94,7 @@ public class DeferredQueue<T> {
     }
 
     /**
-     * Force deque element with call {@link DeferredQueue#onTimeDequeCallback}
+     * Force deque element and call {@link DeferredQueue#onTimeExpiredCallback}
      */
     public void forceTimePull() {
         try {
@@ -104,7 +127,7 @@ public class DeferredQueue<T> {
     }
 
     /**
-     *
+     * Lock required
      */
     private void submitBackgroundTask() {
         if (size() == 1) {
@@ -121,6 +144,9 @@ public class DeferredQueue<T> {
         }
     }
 
+    /**
+     * Lock required
+     */
     private void internalForcePull() {
         T val = poll();
         onForceDequeCallback.call(val);
@@ -131,7 +157,7 @@ public class DeferredQueue<T> {
      */
     private void internalTimePull() {
         T val = poll();
-        onTimeDequeCallback.call(val);
+        onTimeExpiredCallback.call(val);
     }
 
     /**
@@ -166,7 +192,6 @@ public class DeferredQueue<T> {
         return storage.size();
     }
 
-
     /**
      * Lock required
      *
@@ -200,11 +225,11 @@ public class DeferredQueue<T> {
                 } finally {
                     lock.unlock();
                 }
-                if (millisBeforeNext == 0) {
-                    continue;
-                }
                 if (millisBeforeNext == -1) {
                     return;
+                }
+                if (millisBeforeNext == 0) {
+                    continue;
                 }
                 try {
                     Thread.sleep(millisBeforeNext);
