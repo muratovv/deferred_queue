@@ -164,7 +164,10 @@ public class DeferredQueue<T> {
      * Lock required
      */
     private T poll() {
-        return storage.remove(0).getValue();
+        if (size() == 0)
+            return null;
+        else
+            return storage.remove(0).getValue();
     }
 
     /**

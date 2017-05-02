@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import static deferred_queue.core.Delay.delay;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Use cases and unit tests for {@link DeferredQueue}
@@ -139,6 +140,30 @@ public class DeferredQueueTest {
         threadWait(delay(2, TimeUnit.SECONDS));
         assertEquals(2, callbackExecuted[0]);
         queue.stopService();
+    }
+
+    @Test
+    public void emptyPullTest() throws Exception {
+        final boolean[] calledForce       = {false};
+        final boolean[] calledTimeExpired = {false};
+        queue.setOnForceDequeCallback(new Callback<Integer>() {
+            @Override
+            public void call(Integer value) {
+                assertNull(value);
+                calledForce[0] = true;
+            }
+        });
+        queue.setOnTimeExpiredCallback(new Callback<Integer>() {
+            @Override
+            public void call(Integer value) {
+                assertNull(value);
+                calledTimeExpired[0] = true;
+            }
+        });
+        queue.forcePull();
+        queue.forceTimePull();
+        assertEquals(true, calledForce[0]);
+        assertEquals(true, calledTimeExpired[0]);
     }
 
     private void threadWait(Delay delay) {
